@@ -1,8 +1,9 @@
-// app/listing/[id]/page.tsx
 import { supabase } from "@/lib/supabaseClient";
 
-export default async function Page({ params }: { params: { id: string } }) {
-  const { id } = params;
+// ✅ Must be named `Page` for App Router
+export default async function Page(props: { params: { id: string } }) {
+    const { params } = props;
+    const { id } = params;
 
   const { data, error } = await supabase
     .from("listings")
