@@ -20,10 +20,11 @@ export default function AuthCallbackPage() {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
+
 
       if (error) {
-        console.error('Fetch profile error:', error)
+        console.error('Fetch profile error: here1', error)
         return
       }
 
@@ -37,7 +38,7 @@ export default function AuthCallbackPage() {
           created_at: new Date().toISOString(),
         })
         if (insertError) {
-          console.error('Insert profile error:', insertError)
+          console.error('Insert profile error: we here', insertError)
           return
         }
         // Redirect to choose role

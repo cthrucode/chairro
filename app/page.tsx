@@ -1,100 +1,147 @@
-// app/page.tsx
-import { supabase } from '@/lib/supabaseClient'
-import ListingsGrid from '@/components/ListingsGrid'
-import { FaWifi, FaLock, FaShieldAlt, FaChartLine, FaTrafficLight, FaUsers, FaUser, FaChild } from 'react-icons/fa';
+'use client';
 
-export default async function Page() {
-  const { data, error } = await supabase.from('listings').select('*')
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import ListingsGrid from '@/components/ListingsGrid';
+import { supabase } from '@/lib/supabaseClient';
 
-  if (error) {
-    console.error(error)
-    return <div className="p-4 text-red-600">Error loading listings</div>
-  }
+const heroImages = [
+  '/brown-vintage-leather-chairs-stylish-barber-shop.jpg',
+  '/modern-beauty-salon-interior.jpg',
+];
 
-  const features = [
-    { icon: <FaWifi size={48} />, title: 'Free WiFi', description: 'Stay connected at all times' },
-    { icon: <FaLock size={48} />, title: 'Secure', description: 'Safe & private workspaces' },
-    { icon: <FaShieldAlt size={48} />, title: 'Protected', description: 'Peace of mind for your tools' },
-    { icon: <FaChartLine size={48} />, title: 'High Traffic', description: 'Attract more walk-ins' },
-    { icon: <FaTrafficLight size={48} />, title: 'Easy Access', description: 'Prime, visible locations' },
-    { icon: <FaUsers size={48} />, title: 'Team Friendly', description: 'Great for groups or teams' },
-    { icon: <FaUser size={48} />, title: 'Solo Ready', description: 'Perfect for individual barbers' },
-    { icon: <FaChild size={48} />, title: 'All Ages', description: 'Comfortable for everyone' },
-  ];
+export default function HomePage() {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [listings, setListings] = useState<any[]>([]);
 
+  // Rotate Hero Image
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch Listings Client-side
+  useEffect(() => {
+    const fetchListings = async () => {
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error) setListings(data || []);
+    };
+    fetchListings();
+  }, []);
 
   return (
-    <main className="max-w-7xl mx-auto px-4">
-      {/* Sticky top menu */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between py-4">
-          {/* Logo on the left */}
-          <div className="flex items-center">
-            <img
-              src="/chairro-logo.png" // replace with your actual logo path
-              alt="Chairro Logo"
-              className="h-10 w-auto"
-            />
-          </div>
-          {/* Menu links on the right */}
-          <nav className="space-x-6">
-            <a href="/" className="text-black font-medium hover:text-gray-700">Home</a>
-            <a href="/new" className="text-black font-medium hover:text-gray-700">Post Chair</a>
-            <a href="/about" className="text-black font-medium hover:text-gray-700">About</a>
+    <div className="w-full overflow-x-hidden">
+      {/* Header */}
+      <header className="w-screen bg-white shadow-md px-8 py-4 fixed top-0 left-0 z-50">
+        <div className="max-w-screen-2xl mx-auto flex justify-between items-center">
+          <a href="/" className="text-2xl font-bold text-black">Chairro</a>
+          <nav className="space-x-6 text-black">
+            <a href="/about" className="hover:text-gray-700">About</a>
+            <a href="/new" className="hover:text-gray-700">Post Chair</a>
+            <a href="/login" className="hover:text-gray-700">Login</a>
           </nav>
         </div>
       </header>
 
-      {/* Hero section */}
-      <section className="flex flex-col md:flex-row items-center justify-between py-20 md:py-28 gap-8">
-  {/* Text content */}
-  <div className="flex-1 text-center md:text-left">
-    {/* Larger logo over the h1 */}
-    <img
-      src="/chairro-logo.png"
-      alt="Chairro Logo"
-      className="h-40 md:h-56 w-auto mb-4 mx-auto md:mx-0"
-    />
-    <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
-      Discover the perfect booth rental or post your empty chair to earn extra income.
-    </h1>
-    <p className="text-gray-600 text-lg md:text-xl max-w-xl mb-8">
-      Find & Rent Barber and Salon Chairs in Maryland, Washington DC, and Virginia.
-    </p>
-    <a
-      href="/new"
-      className="inline-block bg-black text-white rounded-full px-6 py-3 text-base font-medium hover:bg-gray-800 transition"
-    >
-      + Post Your Chair
-    </a>
-  </div>
-
-  {/* Hero image */}
-  <div className="flex-1">
-    <img
-      src="full-shot-man-getting-haircut.jpg"
-      alt="Hero placeholder"
-      className="w-full max-w-lg mx-auto rounded-xl shadow-md object-cover"
-    />
-  </div>
-</section>
-
-
-<section className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-      {features.map((feature, index) => (
-        <div key={index} className="border rounded-xl p-6 text-center hover:shadow transition">
-          <div className="text-black mb-2">
-            {feature.icon}
-          </div>
-          <h3 className="text-lg font-semibold">{feature.title}</h3>
-          <p className="text-gray-500 text-sm">{feature.description}</p>
+      {/* Hero Section (Image Crossfade) */}
+      <section className="w-screen h-screen relative pt-24">
+        {heroImages.map((src, index) => (
+          <img
+            key={src}
+            src={src}
+            alt={`Hero ${index}`}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+              index === currentImageIndex ? 'opacity-100 z-0' : 'opacity-0 z-0'
+            }`}
+          />
+        ))}
+        <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center px-4">
+          <Image
+            src="/chairro-logo.png"
+            alt="Chairro Logo"
+            width={240}
+            height={240}
+            className="mb-6 filter invert"
+          />
+          <h1 className="text-white drop-shadow-lg text-6xl font-bold max-w-3xl mb-4">
+            Discover and Rent Barber & Salon Chairs in the DMV
+          </h1>
+          <p className="text-white drop-shadow text-lg max-w-xl mb-6">
+            Get exposure, increase income, and manage bookings — all in one place.
+          </p>
+          <a
+            href="/new"
+            className="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+          >
+            + Post Your Chair
+          </a>
         </div>
-      ))}
-    </section>
+      </section>
 
+      {/* Feature Section */}
+      <section className="max-w-screen-2xl mx-auto px-[150px] py-20 bg-white">
+        <h2 className="text-3xl font-semibold mb-8">Why Chairro?</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="border rounded-lg p-6 text-center">
+            <div className="text-4xl mb-4">📶</div>
+            <h3 className="font-semibold text-xl mb-2">Free Wi-Fi</h3>
+            <p className="text-gray-600">Stay connected while you work.</p>
+          </div>
+          <div className="border rounded-lg p-6 text-center">
+            <div className="text-4xl mb-4">🛡️</div>
+            <h3 className="font-semibold text-xl mb-2">Secure Spaces</h3>
+            <p className="text-gray-600">Peace of mind in every booking.</p>
+          </div>
+          <div className="border rounded-lg p-6 text-center">
+            <div className="text-4xl mb-4">👥</div>
+            <h3 className="font-semibold text-xl mb-2">High Foot Traffic</h3>
+            <p className="text-gray-600">Maximize exposure to clients.</p>
+          </div>
+        </div>
+      </section>
 
-      {/* Listings grid */}
-      <ListingsGrid listings={data || []} />
-    </main>
-  )
+      {/* Dynamic Listings Grid from Supabase */}
+      <section className="max-w-screen-2xl mx-auto px-[150px] py-20 bg-white">
+        <h2 className="text-3xl font-semibold mb-8">Live Listings</h2>
+        <ListingsGrid listings={listings || []} />
+      </section>
+
+      {/* Static Listing Grid (can remove or convert to dynamic) */}
+     
+      {/* Footer */}
+      <footer className="w-full bg-gray-100 py-12 mt-12 px-[150px]">
+        <div className="max-w-screen-2xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div>
+            <h4 className="font-semibold text-lg mb-4">Barbers & Stylists</h4>
+            <ul className="space-y-2 text-gray-700">
+              <li><a href="/search">Find a Chair</a></li>
+              <li><a href="/login">Login</a></li>
+              <li><a href="/signup">Sign Up</a></li>
+              <li><a href="/pricing">Pricing</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold text-lg mb-4">Salon Owners</h4>
+            <ul className="space-y-2 text-gray-700">
+              <li><a href="/new">Post a Chair</a></li>
+              <li><a href="/features">Features</a></li>
+              <li><a href="/faq">FAQ</a></li>
+              <li><a href="/support">Support</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold text-lg mb-4">Contact Us</h4>
+            <p className="text-gray-700 mb-2">📞 (202) 555-0143</p>
+            <p className="text-gray-700">🏢 1200 U Street NW, Washington DC 20009</p>
+            <p className="text-gray-600 text-sm mt-4">© {new Date().getFullYear()} Chairro Inc. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
 }
