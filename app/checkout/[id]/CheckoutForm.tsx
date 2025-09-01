@@ -1,140 +1,102 @@
-'use client'
+'use client';
 
-import React, { useState, FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
-import { loadStripe } from '@stripe/stripe-js'
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+import React, { useState } from 'react';
 
 interface Listing {
-  id: string
-  title: string
-  shop: string
-  location: string
-  price: number
-}
-
-interface CheckoutFormInnerProps {
-  listing: Listing
-}
-
-function CheckoutFormInner({ listing }: CheckoutFormInnerProps) {
-  const stripe = useStripe()
-  const elements = useElements()
-  const router = useRouter()
-
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (!stripe || !elements) return
-
-    if (!startTime || !endTime) {
-      setError('Please select start and end times')
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      const res = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          listing_id: listing.id,
-          start_time: startTime,
-          end_time: endTime,
-          price: listing.price,
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Booking failed')
-
-      const clientSecret = data.clientSecret
-      const cardElement = elements.getElement(CardElement)
-      if (!cardElement) throw new Error('Card element not found')
-
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card: cardElement },
-      })
-
-      if (stripeError) {
-        setError(stripeError.message || 'Payment failed')
-        setLoading(false)
-        return
-      }
-
-      if (paymentIntent?.status === 'succeeded') {
-        router.push('/booking-success')
-      }
-    } catch (err: any) {
-      setError(err.message)
-    }
-    setLoading(false)
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-4 space-y-6 border rounded">
-      <h1 className="text-2xl font-semibold">{listing.title}</h1>
-      <p className="text-gray-600">{listing.shop} · {listing.location}</p>
-      <p className="text-blue-600 font-medium">${listing.price}</p>
-
-      <label>
-        Start Time
-        <input
-          type="datetime-local"
-          value={startTime}
-          onChange={e => setStartTime(e.target.value)}
-          className="w-full border rounded px-3 py-2 mt-1"
-          required
-        />
-      </label>
-
-      <label>
-        End Time
-        <input
-          type="datetime-local"
-          value={endTime}
-          onChange={e => setEndTime(e.target.value)}
-          className="w-full border rounded px-3 py-2 mt-1"
-          required
-        />
-      </label>
-
-      <label>
-        Payment Details
-        <div className="border rounded p-3 mt-1">
-          <CardElement />
-        </div>
-      </label>
-
-      {error && <p className="text-red-600">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
-      >
-        {loading ? 'Processing...' : 'Pay & Book'}
-      </button>
-    </form>
-  )
+  id: string;
+  title: string;
+  price: number;
 }
 
 interface CheckoutFormProps {
-  listing: Listing
+  listing: Listing;
 }
 
 export default function CheckoutForm({ listing }: CheckoutFormProps) {
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [time, setTime] = useState<string>(''); // optional
+  const [loading, setLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>('');
+
+  const handleBooking = async () => {
+    if (!startDate) return setMessage('Please select a start date.');
+    if (!endDate) return setMessage('Please select an end date.');
+    if (!listing.id) return setMessage('Listing ID is missing.');
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const res = await fetch(`/api/bookings/listing/${listing.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_date: startDate,
+          end_date: endDate,
+          time: time || null,
+        }),
+      });
+
+      const data: { booking?: any; error?: string } = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create booking');
+
+      setMessage('Booking created successfully! 🎉');
+    } catch (err: any) {
+      setMessage(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Elements stripe={stripePromise}>
-      <CheckoutFormInner listing={listing} />
-    </Elements>
-  )
+    <div className="checkout-form p-4 border rounded">
+      <h2 className="text-xl font-bold mb-4">Checkout for {listing.title}</h2>
+      <p className="mb-2">ID: {listing.id}</p>
+      <p className="mb-4">Price: ${listing.price}</p>
+
+      {/* Start Date */}
+      <label className="block mb-2">
+        <span className="text-gray-700">Start Date *</span>
+        <input
+          type="date"
+          className="border rounded w-full p-2 mt-1"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+      </label>
+
+      {/* End Date */}
+      <label className="block mb-2">
+        <span className="text-gray-700">End Date *</span>
+        <input
+          type="date"
+          className="border rounded w-full p-2 mt-1"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
+      </label>
+
+      {/* Optional Time */}
+      <label className="block mb-4">
+        <span className="text-gray-700">Time (optional)</span>
+        <input
+          type="time"
+          className="border rounded w-full p-2 mt-1"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+        />
+      </label>
+
+      <button
+        onClick={handleBooking}
+        disabled={loading}
+        className="bg-blue-600 text-white px-4 py-2 rounded w-full"
+      >
+        {loading ? 'Booking...' : 'Book Now'}
+      </button>
+
+      {message && <p className="mt-4 text-center text-red-600">{message}</p>}
+    </div>
+  );
 }

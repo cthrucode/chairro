@@ -1,15 +1,11 @@
-// next.config.js
-
-const withPWA = require('next-pwa')({
-  dest: 'public',         // Where service worker is output
-  register: true,         // Auto-register service worker
-  skipWaiting: true       // Skip waiting on new version
-})
-
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-  // ...other config options
-}
-
-module.exports = withPWA(nextConfig)
+module.exports = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "ebnledcbmnsnwsaremnk.supabase.co",
+        pathname: "/storage/v1/object/public/listing-images/**",
+      },
+    ],
+  },
+};

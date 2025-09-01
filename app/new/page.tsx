@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 export default function NewListingPage() {
   const router = useRouter()
@@ -12,60 +13,47 @@ export default function NewListingPage() {
     location: '',
     price: '',
     description: '',
-    image: null as File | null,
+    images: [] as File[],
   })
   const [loading, setLoading] = useState(false)
 
+  const fileInputs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.image) {
-      alert('Please select an image.')
+    if (form.images.length === 0) {
+      alert('Please select at least one image.')
       return
     }
 
     setLoading(true)
 
     try {
-      // Upload image
-      const filename = `${Date.now()}-${form.image.name}`
-      const { error: uploadError } = await supabase
-        .storage.from('listing-images').upload(filename, form.image)
+      const uploadedUrls: string[] = []
+      for (const image of form.images) {
+        const filename = `${Date.now()}-${image.name}`
+        const { error: uploadError } = await supabase
+          .storage.from('listing-images')
+          .upload(filename, image)
 
-      if (uploadError) {
-        throw uploadError
+        if (uploadError) throw uploadError
+
+        const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-images/${filename}`
+        uploadedUrls.push(imageUrl)
       }
 
-      const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-images/${filename}`
-
-      // Insert record
-      const { error: insertError } = await supabase.from('listings').insert([
-        {
+      const { error: insertError } = await supabase
+        .from('listings')
+        .insert([{
           title: form.title,
           shop: form.shop,
           location: form.location,
           price: form.price,
           description: form.description,
-          image_url: imageUrl,
-        }
-      ])
+          image_urls: uploadedUrls,
+        }])
 
-
-      const { data, error } = await supabase
-  .from('listings')
-  .insert([{
-    title: form.title,
-    shop: form.shop,
-    location: form.location,
-    price: form.price,
-    description: form.description,
-    image_url: imageUrl,
-  }])
-  .select('*');  // <-- will return inserted row
-
-
-      if (insertError) {
-        throw insertError
-      }
+      if (insertError) throw insertError
 
       alert('Listing submitted successfully!')
       router.push('/')
@@ -77,54 +65,100 @@ export default function NewListingPage() {
     }
   }
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const files = e.target.files
+    if (!files) return
+    const newImages = [...form.images]
+    newImages[index] = files[0]
+    setForm(f => ({ ...f, images: newImages }))
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl mx-auto p-6 space-y-4">
-      <input
-        type="text"
-        placeholder="Title"
-        required
-        className="w-full border rounded px-3 py-2"
-        onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-      />
-      <input
-        type="text"
-        placeholder="Shop Name"
-        required
-        className="w-full border rounded px-3 py-2"
-        onChange={e => setForm(f => ({ ...f, shop: e.target.value }))}
-      />
-      <input
-        type="text"
-        placeholder="Location"
-        required
-        className="w-full border rounded px-3 py-2"
-        onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-      />
-      <input
-        type="text"
-        placeholder="Price"
-        required
-        className="w-full border rounded px-3 py-2"
-        onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-      />
-      <textarea
-        placeholder="Description"
-        className="w-full border rounded px-3 py-2"
-        onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-      />
-      <input
-        type="file"
-        accept="image/*"
-        required
-        onChange={e => setForm(f => ({ ...f, image: e.target.files?.[0] || null }))}
-      />
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
-      >
-        {loading ? 'Submitting...' : 'Submit Listing'}
-      </button>
-    </form>
+    <div className="max-w-xl mx-auto p-6 space-y-6">
+      {/* Chairro Logo */}
+      <div className="flex justify-center">
+        <Image
+          src="/chairro-logo.png" // <-- place your logo in public/chairro-logo.png
+          alt="Chairro Logo"
+          width={120}
+          height={120}
+          className="object-contain"
+        />
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="text"
+          placeholder="Title"
+          required
+          className="w-full border rounded px-3 py-2"
+          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+        />
+        <input
+          type="text"
+          placeholder="Shop Name"
+          required
+          className="w-full border rounded px-3 py-2"
+          onChange={e => setForm(f => ({ ...f, shop: e.target.value }))}
+        />
+        <input
+          type="text"
+          placeholder="Location"
+          required
+          className="w-full border rounded px-3 py-2"
+          onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+        />
+        <input
+          type="text"
+          placeholder="Price"
+          required
+          className="w-full border rounded px-3 py-2"
+          onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+        />
+        <textarea
+          placeholder="Description"
+          className="w-full border rounded px-3 py-2"
+          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+        />
+
+        {/* 3 upload slots */}
+        <div className="flex gap-3 mt-3">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx}>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputs[idx]}
+                style={{ display: 'none' }}
+                onChange={e => handleImageChange(e, idx)}
+              />
+
+              <div
+                className="w-24 h-24 border rounded flex items-center justify-center cursor-pointer overflow-hidden"
+                onClick={() => fileInputs[idx].current?.click()}
+              >
+                {form.images[idx] ? (
+                  <img
+                    src={URL.createObjectURL(form.images[idx])}
+                    alt={`preview-${idx}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl text-gray-400">+</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 w-full"
+        >
+          {loading ? 'Submitting...' : 'Submit Listing'}
+        </button>
+      </form>
+    </div>
   )
 }

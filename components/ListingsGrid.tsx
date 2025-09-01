@@ -4,8 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import ListingCard from './ListingCard'
 
-
-export default function ListingsGrid({ listings }) {
+export default function ListingsGrid({ listings }: { listings: any[] }) {
   const [search, setSearch] = useState('')
 
   const filteredListings = listings.filter(listing =>
@@ -37,14 +36,15 @@ export default function ListingsGrid({ listings }) {
         {filteredListings.length > 0 ? (
           filteredListings.map(listing => (
             <ListingCard
-            key={listing.id}
-            id={listing.id}
-            title={listing.title}
-            shop={listing.shop}
-            location={listing.location}
-            price={listing.price}
-            image={listing.image_url}
-          />          
+  key={listing.id}
+  id={listing.id}
+  title={listing.title || ''}
+  shop={listing.shop || ''}
+  location={listing.location || ''}
+  price={listing.price}
+  image={listing.image_urls?.[0] || listing.image_url || ''}
+/>
+        
           ))
         ) : (
           <p className="text-center text-gray-500 col-span-full">No listings found.</p>
