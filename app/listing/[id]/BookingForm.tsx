@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type BookingFormProps = {
   listingId: string;
@@ -13,51 +12,80 @@ export default function BookingForm({ listingId, listingTitle, price }: BookingF
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [nextAvailable, setNextAvailable] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!startDate || !endDate) {
-      alert("Please select start and end dates.");
-      return;
-    }
-
     setLoading(true);
+    setNextAvailable(null);
 
     try {
-      // 1. Create booking in Supabase
-      const bookingRes = await fetch(`/api/bookings/listing/${listingId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ start_date: startDate, end_date: endDate }),
-      });
+      // 1️⃣ Check availability
+      const checkRes = await fetch(
+        `/api/bookings/check/${listingId}?start_date=${startDate}&end_date=${endDate}`
+      );
 
-      const bookingData = await bookingRes.json();
-      if (!bookingRes.ok) throw new Error(bookingData.error || "Booking failed");
+      if (!checkRes.ok) throw new Error("Failed to check availability");
 
-      // 2. Calculate total price
-      const nights =
-        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-        (1000 * 60 * 60 * 24);
-      const totalPrice = nights * price;
+      const checkData = await checkRes.json();
 
-      // 3. Redirect to Stripe Checkout
-      const stripeRes = await fetch("/api/checkout", {
+      if (!checkData.available) {
+        setNextAvailable(checkData.nextAvailable || null);
+        setLoading(false);
+        return;
+      }
+
+      // 2️⃣ Insert booking
+      const insertRes = await fetch(`/api/bookings/listing/${listingId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bookingId: bookingData.booking.id,
-          listingTitle,
-          totalPrice,
+          start_date: startDate,
+          end_date: endDate,
         }),
       });
 
-      const { url, error } = await stripeRes.json();
-      if (error) throw new Error(error);
-      if (url) window.location.href = url;
+      const insertData = await insertRes.json();
+
+      if (!insertRes.ok) {
+        console.error("Booking failed:", insertData.error);
+        alert("Booking failed: " + insertData.error);
+        setLoading(false);
+        return;
+      }
+
+      // 🔹 Expect backend to return bookingId + total_price
+      const { bookingId, total_price } = insertData;
+
+      if (!bookingId || !total_price) {
+        throw new Error("Booking did not return bookingId or total_price");
+      }
+
+      // 3️⃣ Create Stripe Checkout session
+      const checkoutRes = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId,
+          listingTitle,
+          totalPrice: total_price,
+        }),
+      });
+
+      const checkoutData = await checkoutRes.json();
+
+      if (!checkoutRes.ok || !checkoutData.url) {
+        console.error("❌ Checkout error:", checkoutData.error);
+        alert("Payment failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // 4️⃣ Redirect user to Stripe Checkout
+      window.location.href = checkoutData.url;
     } catch (err: any) {
-      alert(err.message);
+      console.error("Error submitting booking:", err.message || err);
+      alert(err.message || "Unexpected error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -78,6 +106,7 @@ export default function BookingForm({ listingId, listingTitle, price }: BookingF
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
           className="w-full border px-3 py-2 rounded-md"
+          required
         />
       </div>
 
@@ -88,7 +117,14 @@ export default function BookingForm({ listingId, listingTitle, price }: BookingF
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
           className="w-full border px-3 py-2 rounded-md"
+          required
         />
+        {nextAvailable && (
+          <p className="text-blue-600 text-sm mt-2">
+            That time is booked up. Please choose a date after{" "}
+            <strong>{new Date(nextAvailable).toDateString()}</strong>.
+          </p>
+        )}
       </div>
 
       <button

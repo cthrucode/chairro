@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --color-orange: #E76F51; /* Desert Orange */
+  --color-orange: #6366f1; /* Desert Orange */
   --color-pink: #F28D8D;   /* Gummy Pink */
   --color-blue: #4CB7E6;   /* Aqua Blue */
   --color-green: #7CB342;  /* Moss Green */

@@ -11,7 +11,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { bookingId, listingTitle, totalPrice } = body;
 
-    console.log("📦 Checkout body:", body);
+    
+    // 🔹 Debug logging
+    console.log("📦 Checkout request body:", body);
+    console.log("➡️ bookingId:", bookingId);
+    console.log("➡️ listingTitle:", listingTitle);
+    console.log("➡️ totalPrice:", totalPrice);
 
 
     if (!bookingId || !listingTitle || !totalPrice) {
