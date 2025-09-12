@@ -27,7 +27,7 @@ export default function BookingForm({ listingId, listingTitle, price }: BookingF
 
       if (!checkRes.ok) throw new Error("Failed to check availability");
 
-      const checkData = await checkRes.json();
+      const checkData: { available: boolean; nextAvailable?: string } = await checkRes.json();
 
       if (!checkData.available) {
         setNextAvailable(checkData.nextAvailable || null);
@@ -45,7 +45,8 @@ export default function BookingForm({ listingId, listingTitle, price }: BookingF
         }),
       });
 
-      const insertData = await insertRes.json();
+      const insertData: { bookingId?: string; total_price?: number; error?: string } =
+        await insertRes.json();
 
       if (!insertRes.ok) {
         console.error("Booking failed:", insertData.error);
@@ -72,7 +73,7 @@ export default function BookingForm({ listingId, listingTitle, price }: BookingF
         }),
       });
 
-      const checkoutData = await checkoutRes.json();
+      const checkoutData: { url?: string; error?: string } = await checkoutRes.json();
 
       if (!checkoutRes.ok || !checkoutData.url) {
         console.error("❌ Checkout error:", checkoutData.error);
@@ -83,12 +84,22 @@ export default function BookingForm({ listingId, listingTitle, price }: BookingF
 
       // 4️⃣ Redirect user to Stripe Checkout
       window.location.href = checkoutData.url;
-    } catch (err: any) {
-      console.error("Error submitting booking:", err.message || err);
-      alert(err.message || "Unexpected error. Please try again.");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error("Error submitting booking:", err.message);
+        alert(err.message);
+      } else {
+        console.error("Unexpected error:", err);
+        alert("Unexpected error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTourRequest = () => {
+    // You can open a modal, or redirect to /tours page
+    window.location.href = `/tours/request?listingId=${listingId}`;
   };
 
   return (
@@ -127,12 +138,22 @@ export default function BookingForm({ listingId, listingTitle, price }: BookingF
         )}
       </div>
 
+      {/* Book Now Button */}
       <button
         type="submit"
         disabled={loading}
         className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
       >
         {loading ? "Processing..." : "Book Now"}
+      </button>
+
+      {/* New Request Tour Button */}
+      <button
+        type="button"
+        onClick={handleTourRequest}
+        className="w-full bg-gray-100 text-gray-800 py-2 rounded-md border hover:bg-gray-200 transition-colors text-sm"
+      >
+        Request a Tour ($20 deposit)
       </button>
     </form>
   );

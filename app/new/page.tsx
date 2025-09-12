@@ -5,18 +5,26 @@ import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
+interface FormState {
+  title: string
+  shop: string
+  location: string
+  price: string
+  description: string
+  images: File[]
+}
+
 export default function NewListingPage() {
   const router = useRouter()
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     title: '',
     shop: '',
     location: '',
     price: '',
     description: '',
-    images: [] as File[],
+    images: [],
   })
   const [loading, setLoading] = useState(false)
-
   const fileInputs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]
 
   async function handleSubmit(e: React.FormEvent) {
@@ -57,9 +65,10 @@ export default function NewListingPage() {
 
       alert('Listing submitted successfully!')
       router.push('/')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      alert('Error: ' + err.message)
+      if (err instanceof Error) alert('Error: ' + err.message)
+      else alert('An unexpected error occurred.')
     } finally {
       setLoading(false)
     }
@@ -78,7 +87,7 @@ export default function NewListingPage() {
       {/* Chairro Logo */}
       <div className="flex justify-center">
         <Image
-          src="/chairro-logo.png" // <-- place your logo in public/chairro-logo.png
+          src="/chairro-logo.png"
           alt="Chairro Logo"
           width={120}
           height={120}
@@ -138,10 +147,12 @@ export default function NewListingPage() {
                 onClick={() => fileInputs[idx].current?.click()}
               >
                 {form.images[idx] ? (
-                  <img
+                  <Image
                     src={URL.createObjectURL(form.images[idx])}
                     alt={`preview-${idx}`}
-                    className="w-full h-full object-cover"
+                    width={96}
+                    height={96}
+                    className="object-cover w-full h-full"
                   />
                 ) : (
                   <span className="text-2xl text-gray-400">+</span>

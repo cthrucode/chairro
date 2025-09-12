@@ -1,26 +1,38 @@
-import Link from 'next/link'
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
 
 type ListingCardProps = {
-  id: string
-  title: string
-  shop: string
-  location: string
-  price: number
-  images?: string[] | null
-}
+  id: string;
+  title: string;
+  shop: string;
+  location: string;
+  price: number;
+  image?: string | null;
+};
 
-
-export default function ListingCard({ id, title, shop, location, price, image }: ListingCardProps) {
+export default function ListingCard({
+  id,
+  title,
+  shop,
+  location,
+  price,
+  image,
+}: ListingCardProps) {
   return (
     <div className="rounded-2xl shadow bg-white flex flex-col">
       <Link
         href={`/listing/${id}`}
-        className="block rounded-t-2xl overflow-hidden group"
+        className="block rounded-t-2xl overflow-hidden group relative w-full h-48"
       >
-        <img
-          src={image || '/placeholder.jpg'}
+        <Image
+          src={image || "/placeholder.jpg"}
           alt={title}
-          className="w-full h-48 object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+          fill
+          sizes="100vw"
+          className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+          priority={false}
         />
       </Link>
 
@@ -32,8 +44,10 @@ export default function ListingCard({ id, title, shop, location, price, image }:
           {title}
         </Link>
 
-        <p className="text-gray-500">{shop} · {location}</p>
-        <p className="text-blue-600 font-medium mb-4">${price}</p>
+        <p className="text-gray-500">
+          {shop} · {location}
+        </p>
+        <p className="text-pink font-semibold mb-4">${price}</p>
 
         <Link
           href={`/listing/${id}`}
@@ -43,5 +57,5 @@ export default function ListingCard({ id, title, shop, location, price, image }:
         </Link>
       </div>
     </div>
-  )
+  );
 }

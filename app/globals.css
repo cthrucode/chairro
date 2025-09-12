@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --color-orange: #6366f1; /* Desert Orange */
+  --color-orange: #89cff0; /* Desert Orange */
   --color-pink: #F28D8D;   /* Gummy Pink */
   --color-blue: #4CB7E6;   /* Aqua Blue */
   --color-green: #7CB342;  /* Moss Green */
-  --color-light: #FDFBF9;  /* Neutral Background */
+  --color-light: #FFF;  /* Neutral Background */
   --color-dark: #1A1A1A;   /* Deep neutral for text */
 }
 
