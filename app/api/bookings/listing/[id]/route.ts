@@ -7,13 +7,28 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+interface Listing {
+  id: string;
+  price: string;
+  title: string;
+  host_id: string;
+}
+
+interface Booking {
+  id: string;
+  total_price: number;
+}
+
 export async function POST(
   req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: any // 👈 use `any` here instead of trying to type params
 ) {
   try {
-    const { id: listing_id } = await context.params;
-    const { start_date, end_date } = await req.json();
+    const listing_id = context.params.id; // ✅ safe to access
+    const { start_date, end_date } = (await req.json()) as {
+      start_date: string;
+      end_date: string;
+    };
 
     if (!listing_id || !start_date || !end_date) {
       return NextResponse.json(
@@ -26,7 +41,7 @@ export async function POST(
 
     // 1️⃣ Get listing
     const { data: listing, error: listingError } = await supabase
-      .from("listings")
+      .from<Listing>("listings")
       .select("id, price, title, host_id")
       .eq("id", listing_id)
       .single();
@@ -46,7 +61,7 @@ export async function POST(
 
     // 2️⃣ Insert booking
     const { data: booking, error: bookingError } = await supabase
-      .from("bookings")
+      .from<Booking>("bookings")
       .insert([
         {
           listing_id,
@@ -57,18 +72,18 @@ export async function POST(
           host_id: listing.host_id,
         },
       ])
-      .select("id, total_price") // 👈 only select the needed fields
+      .select("id, total_price")
       .single();
 
-    if (bookingError) {
+    if (bookingError || !booking) {
       console.error("❌ Supabase insert error:", bookingError);
       return NextResponse.json(
-        { error: "Insert failed", details: bookingError.message },
+        { error: "Insert failed", details: bookingError?.message },
         { status: 400 }
       );
     }
 
-    // 3️⃣ Return in the shape BookingForm expects
+    // ✅ Return JSON (not JSX)
     return NextResponse.json(
       {
         bookingId: booking.id,
@@ -76,9 +91,15 @@ export async function POST(
       },
       { status: 201 }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      return NextResponse.json(
+        { error: "Unexpected error", details: err.message },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
-      { error: "Unexpected error", details: err?.message },
+      { error: "Unexpected error", details: "Unknown error" },
       { status: 500 }
     );
   }

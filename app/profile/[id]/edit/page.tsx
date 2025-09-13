@@ -5,7 +5,13 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
-export default function EditProfilePage({ params }: { params: { id: string } }) {
+// ✅ Don’t use PageProps from Next.js generated types.
+// ✅ Just define inline prop type instead
+export default function EditProfilePage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -39,11 +45,9 @@ export default function EditProfilePage({ params }: { params: { id: string } }) 
     try {
       let avatar_url = profile.avatar_url;
 
-      // Upload new avatar if provided
       if (avatarFile) {
         const filename = `${params.id}-${Date.now()}-${avatarFile.name}`;
-        const { error: uploadError } = await supabase
-          .storage
+        const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(filename, avatarFile, { upsert: true });
 
@@ -52,7 +56,6 @@ export default function EditProfilePage({ params }: { params: { id: string } }) 
         avatar_url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${filename}`;
       }
 
-      // Update profile
       const { error: updateError } = await supabase
         .from('profiles')
         .update({

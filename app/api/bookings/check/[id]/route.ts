@@ -6,52 +6,37 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const start_date = searchParams.get("start_date");
-    const end_date = searchParams.get("end_date");
+    // Extract the ID from the URL
+    const url = new URL(req.url);
+    const segments = url.pathname.split("/");
+    const listing_id = segments[segments.length - 1];
 
-    if (!start_date || !end_date) {
+    const body = await req.json();
+    const { title, shop, location, price, description } = body;
+
+    if (!listing_id || !title || !shop || !location || !price) {
       return NextResponse.json(
-        { error: "start_date and end_date are required" },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    const listing_id = params.id;
-
-    const { data: overlaps, error } = await supabase
-      .from("bookings")
-      .select("start_date, end_date")
-      .eq("listing_id", listing_id)
-      .or(`and(start_date.lte.${end_date},end_date.gte.${start_date})`);
+    const { error } = await supabase
+      .from("listings")
+      .update({ title, shop, location, price, description })
+      .eq("id", listing_id);
 
     if (error) {
-      console.error("❌ Supabase error:", error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (overlaps.length > 0) {
-      const latestEnd = overlaps
-        .map((b) => new Date(b.end_date))
-        .sort((a, b) => b.getTime() - a.getTime())[0];
-
-      const nextAvailable = new Date(latestEnd);
-      nextAvailable.setDate(nextAvailable.getDate() + 1);
-
-      return NextResponse.json({
-        available: false,
-        nextAvailable: nextAvailable.toISOString().split("T")[0],
-      });
-    }
-
-    return NextResponse.json({ available: true });
+    return NextResponse.json({ message: "Listing updated successfully" }, { status: 200 });
   } catch (err: any) {
-    console.error("❌ API error:", err.message || err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Server error", details: err.message },
+      { status: 500 }
+    );
   }
 }

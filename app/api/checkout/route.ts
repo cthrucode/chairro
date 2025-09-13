@@ -6,20 +6,21 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2022-11-15",
 });
 
+interface CheckoutRequestBody {
+  bookingId: string;
+  listingTitle: string;
+  totalPrice: number;
+}
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as CheckoutRequestBody;
     const { bookingId, listingTitle, totalPrice } = body;
 
-    
     // 🔹 Debug logging
     console.log("📦 Checkout request body:", body);
-    console.log("➡️ bookingId:", bookingId);
-    console.log("➡️ listingTitle:", listingTitle);
-    console.log("➡️ totalPrice:", totalPrice);
 
-
-    if (!bookingId || !listingTitle || !totalPrice) {
+    if (!bookingId || !listingTitle || totalPrice == null) {
       return NextResponse.json(
         { error: "bookingId, listingTitle, and totalPrice are required" },
         { status: 400 }
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
           price_data: {
             currency: "usd",
             product_data: { name: listingTitle },
-            unit_amount: totalPrice * 100, // cents
+            unit_amount: Math.round(totalPrice * 100), // convert dollars to cents
           },
           quantity: 1,
         },
@@ -45,8 +46,18 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ url: session.url }, { status: 200 });
-  } catch (err: any) {
-    console.error("❌ Error creating Stripe session:", err.message || err);
-    return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 });
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error("❌ Error creating Stripe session:", err.message);
+      return NextResponse.json(
+        { error: "Failed to create checkout session", details: err.message },
+        { status: 500 }
+      );
+    }
+    console.error("❌ Unknown error creating Stripe session:", err);
+    return NextResponse.json(
+      { error: "Failed to create checkout session", details: "Unknown error" },
+      { status: 500 }
+    );
   }
 }
